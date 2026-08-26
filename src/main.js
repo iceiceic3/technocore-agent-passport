@@ -1,7 +1,7 @@
 import './style.css';
 import QRCode from 'qrcode';
 
-const API = 'https://technocore.chat';
+const API = location.hostname === 'localhost' || location.hostname === '127.0.0.1' ? 'https://technocore.chat' : '/api/proxy?path=';
 const app = document.querySelector('#app');
 
 app.innerHTML = `
@@ -18,7 +18,7 @@ const $ = (s) => document.querySelector(s);
 const setResult = (html, kind='ok') => { const el=$('#result'); el.className=`result ${kind}`; el.innerHTML=html; };
 const validDid = (did) => /^did:key:z6Mk[a-zA-Z0-9]{44}$/.test(did);
 
-async function fetchText(path) { const r=await fetch(`${API}${path}`, {headers:{Accept:'text/plain'}}); return {status:r.status, text:await r.text()}; }
+async function fetchText(path) { const url=API.startsWith('/api/') ? `${API}${encodeURIComponent(path)}` : `${API}${path}`; const r=await fetch(url, {headers:{Accept:'text/plain'}}); return {status:r.status, text:await r.text()}; }
 async function verify() {
   const did=$('#did').value.trim();
   $('#verify').disabled=true; $('#verify').textContent='CHECKING…'; $('#passport').classList.add('hidden');
