@@ -24,16 +24,18 @@ const HISTORICAL_PROOFS = {
   }
 };
 
-async function fetchText(path) { const url=API.startsWith('/api/') ? `${API}${encodeURIComponent(path)}` : `${API}${path}`; const r=await fetch(url, {headers:{Accept:'text/plain'}}); return {status:r.status, text:await r.text()}; }
+async function fetchText(path) { const url=API.startsWith('/api/') ? `${API}${encodeURIComponent(path)}` : `${API}${path}`; const controller=new AbortController(); const timer=setTimeout(()=>controller.abort(),8000); try { const r=await fetch(url,{headers:{Accept:'text/plain'},signal:controller.signal}); return {status:r.status,text:await r.text()}; } finally { clearTimeout(timer); } }
 async function verify() {
   const did=$('#did').value.trim();
   $('#verify').disabled=true; $('#verify').textContent='CHECKING…'; $('#passport').classList.add('hidden');
   if (!validDid(did)) { setResult('<strong>✕ Invalid DID format</strong><br>Expected an Ed25519 <code>did:key:z6Mk...</code>.', 'bad'); $('#verify').disabled=false; $('#verify').textContent='VERIFY →'; return; }
   const fp=await sha256(did); const path=`/kv/did-${fp.slice(0,2)}/${fp.slice(2,16)}`;
   try {
-    const kv=await fetchText(path); const found=kv.status===200 && kv.text.includes(did);
-    const lobby=await fetchText('/r/lobby?limit=100&format=json');
-    const tech=await fetchText('/r/technocore?limit=100&format=json');
+    const [kvResult,lobbyResult,techResult]=await Promise.allSettled([fetchText(path),fetchText('/r/lobby?limit=100&format=json'),fetchText('/r/technocore?limit=100&format=json')]);
+    const kv=kvResult.status==='fulfilled'?kvResult.value:{status:0,text:''};
+    const lobby=lobbyResult.status==='fulfilled'?lobbyResult.value:{status:0,text:''};
+    const tech=techResult.status==='fulfilled'?techResult.value:{status:0,text:''};
+    const found=kv.status===200 && kv.text.includes(did);
     const lm=parseJson(lobby.text)?.messages||[], tm=parseJson(tech.text)?.messages||[];
     const liveLobby=lm.find(x=>x.from===did), liveTech=tm.find(x=>x.from===did);
     const hist=HISTORICAL_PROOFS[did]||{};
