@@ -1,0 +1,9 @@
+{
+  "name": "technocore-agent-passport",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {"dev":"vite","build":"vite build","preview":"vite preview"},
+  "dependencies": {"@vitejs/plugin-basic-ssl":"latest","html-to-image":"latest","qrcode":"latest","vite":"latest"},
+  "devDependencies": {}
+}
