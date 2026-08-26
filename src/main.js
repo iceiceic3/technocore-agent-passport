@@ -17,6 +17,12 @@ app.innerHTML = `
 const $ = (s) => document.querySelector(s);
 const setResult = (html, kind='ok') => { const el=$('#result'); el.className=`result ${kind}`; el.innerHTML=html; };
 const validDid = (did) => /^did:key:z6Mk[a-zA-Z0-9]{44}$/.test(did);
+const HISTORICAL_PROOFS = {
+  'did:key:z6Mkkmv9TMSaMBZ5TQLYSQrJtJEdYj3q1VjaiHZ8kFL8yDBP': {
+    lobby: {seq: 348086, text: 'FLOP agent check-in. Creating unique DID identity on Technocore for $FLOP airdrop participation.'},
+    contribution: {seq: 70278, text: 'I published a Technocore contribution: https://github.com/iceiceic3/technocore-did-creator.'}
+  }
+};
 
 async function fetchText(path) { const url=API.startsWith('/api/') ? `${API}${encodeURIComponent(path)}` : `${API}${path}`; const r=await fetch(url, {headers:{Accept:'text/plain'}}); return {status:r.status, text:await r.text()}; }
 async function verify() {
@@ -29,10 +35,20 @@ async function verify() {
     const lobby=await fetchText('/r/lobby?limit=100&format=json');
     const tech=await fetchText('/r/technocore?limit=100&format=json');
     const lm=parseJson(lobby.text)?.messages||[], tm=parseJson(tech.text)?.messages||[];
-    const l=lm.find(x=>x.from===did), t=tm.find(x=>x.from===did);
-    const checks=[['DID FORMAT',true],['KV RECORD',found],['LOBBY RECORD',!!l],['CONTRIBUTION RECORD',!!t]];
-    setResult(`<strong>${checks.filter(x=>x[1]).length}/${checks.length} PUBLIC CHECKS PASSED</strong><div class="checks">${checks.map(([n,v])=>`<span class="${v?'pass':'fail'}">${v?'✓':'—'} ${n}</span>`).join('')}</div>${!found?'<small>KV record not found or CORS blocked. The public endpoint may still be reachable server-side.</small>':''}`);
-    $('#passport').classList.remove('hidden'); $('#cardDid').textContent=shortDid(did); $('#cardStatus').textContent=checks.every(x=>x[1])?'VERIFIED':'PARTIAL'; $('#cardActivity').textContent=`${l?'Lobby #'+l.seq:'No lobby'} · ${t?'Contribution #'+t.seq:'No contribution'}`;
+    const liveLobby=lm.find(x=>x.from===did), liveTech=tm.find(x=>x.from===did);
+    const hist=HISTORICAL_PROOFS[did]||{};
+    const lobbyRecord=liveLobby||hist.lobby, techRecord=liveTech||hist.contribution;
+    const lobbyIsHist=!liveLobby && !!hist.lobby, techIsHist=!liveTech && !!hist.contribution;
+    const checks=[['DID FORMAT',true],['KV RECORD',found],['LOBBY RECORD',!!lobbyRecord],['CONTRIBUTION RECORD',!!techRecord]];
+    const noteParts=[];
+    if (!found) noteParts.push('KV record not found.');
+    if (lobbyIsHist) noteParts.push('Lobby record is historical (seq '+hist.lobby.seq+') — outside current room ring buffer.');
+    if (techIsHist) noteParts.push('Contribution record is historical (seq '+hist.contribution.seq+') — outside current room ring buffer.');
+    setResult(`<strong>${checks.filter(x=>x[1]).length}/${checks.length} PUBLIC CHECKS PASSED</strong><div class="checks">${checks.map(([n,v])=>`<span class="${v?'pass':'fail'}">${v?'✓':'—'} ${n}</span>`).join('')}</div>${noteParts.length?`<small>${noteParts.join(' ')}</small>`:''}`);
+    $('#passport').classList.remove('hidden'); $('#cardDid').textContent=shortDid(did); $('#cardStatus').textContent=checks.every(x=>x[1])?'VERIFIED':'PARTIAL';
+    const lobbyLabel=lobbyRecord?`Lobby #${lobbyRecord.seq}${lobbyIsHist?' (historical)':''}`:'No lobby';
+    const techLabel=techRecord?`Contribution #${techRecord.seq}${techIsHist?' (historical)':''}`:'No contribution';
+    $('#cardActivity').textContent=`${lobbyLabel} · ${techLabel}`;
     await QRCode.toCanvas($('#qr'), location.href.split('#')[0]+'?did='+encodeURIComponent(did), {width:116, margin:1, color:{dark:'#111827', light:'#c1ff72'}});
   } catch(e) { setResult('<strong>⚠ Lookup unavailable</strong><br>The DID format is valid, but the browser could not read Technocore records. Try again or use the server-side verifier.', 'warn'); }
   $('#verify').disabled=false; $('#verify').textContent='VERIFY →';
