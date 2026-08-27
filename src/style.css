@@ -29,5 +29,5 @@
 .passport-main{padding-top:86px!important}
 @media(max-width:700px){.card{min-height:570px;padding-bottom:78px}.passport-main{width:100%;padding-top:152px!important}.card-kicker{max-width:100%;margin-bottom:24px}.card h2{max-width:72%;font-size:46px;margin-bottom:28px}.card-did{max-width:62%;padding-top:0!important;margin-bottom:22px}.qr-label{right:22px;bottom:230px}.card canvas{right:20px;bottom:76px}.card-footer{bottom:14px}}
 /* Final desktop zone override */
-@media(min-width:701px){.card{min-height:390px}.passport-main{padding-top:145px!important}}
+@media(min-width:701px){.card{min-height:440px}.passport-main{padding-top:145px!important}}
 
