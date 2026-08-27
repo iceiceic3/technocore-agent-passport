@@ -25,13 +25,14 @@ const HISTORICAL_PROOFS = {
 };
 
 async function fetchText(path) { const url=API.startsWith('/api/') ? `${API}${encodeURIComponent(path)}` : `${API}${path}`; const controller=new AbortController(); const timer=setTimeout(()=>controller.abort(),8000); try { const r=await fetch(url,{headers:{Accept:'text/plain'},signal:controller.signal}); return {status:r.status,text:await r.text()}; } finally { clearTimeout(timer); } }
+async function fetchWithRetry(path, attempts=3) { let last={status:0,text:''}; for (let i=0;i<attempts;i++) { try { last=await fetchText(path); if (last.status===200 && last.text.trim()) return last; } catch {} if (i<attempts-1) await new Promise(r=>setTimeout(r,350)); } return last; }
 async function verify() {
   const did=$('#did').value.trim();
   $('#verify').disabled=true; $('#verify').textContent='CHECKING…'; $('#passport').classList.add('hidden');
   if (!validDid(did)) { setResult('<strong>✕ Invalid DID format</strong><br>Expected an Ed25519 <code>did:key:z6Mk...</code>.', 'bad'); $('#verify').disabled=false; $('#verify').textContent='VERIFY →'; return; }
   const fp=await sha256(did); const path=`/kv/did-${fp.slice(0,2)}/${fp.slice(2,16)}`;
   try {
-    const [kvResult,lobbyResult,techResult]=await Promise.allSettled([fetchText(path),fetchText('/r/lobby?limit=100&format=json'),fetchText('/r/technocore?limit=100&format=json')]);
+    const [kvResult,lobbyResult,techResult]=await Promise.allSettled([fetchWithRetry(path,3),fetchText('/r/lobby?limit=100&format=json'),fetchText('/r/technocore?limit=100&format=json')]);
     const kv=kvResult.status==='fulfilled'?kvResult.value:{status:0,text:''};
     const lobby=lobbyResult.status==='fulfilled'?lobbyResult.value:{status:0,text:''};
     const tech=techResult.status==='fulfilled'?techResult.value:{status:0,text:''};

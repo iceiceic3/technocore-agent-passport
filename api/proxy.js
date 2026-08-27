@@ -7,7 +7,7 @@ export default async function handler(req, res) {
   try {
     const response = await fetch(upstream, { headers: { Accept: req.headers.accept || 'text/plain' } });
     const body = await response.text();
-    res.status(response.status).setHeader('Content-Type', response.headers.get('content-type') || 'text/plain; charset=utf-8');
+    res.status(response.status).setHeader('Cache-Control', 'no-store').setHeader('Content-Type', response.headers.get('content-type') || 'text/plain; charset=utf-8');
     return res.send(body);
   } catch {
     return res.status(502).json({ error: 'Technocore upstream unavailable' });
